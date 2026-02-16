@@ -29,8 +29,8 @@ export default function Dashboard() {
 
   const kpis = [
     { label: 'Current Weight', value: kpiData?.currentWeight ? `${kpiData.currentWeight} kg` : '—', icon: Scale },
-    { label: "Today's Calories", value: `${kpiData?.todayCalories ?? 0}`, icon: Flame },
-    { label: "Today's Protein", value: `${kpiData?.todayProtein ?? 0}g`, icon: Beef },
+    { label: "Today's Calories", value: `${Number(kpiData?.todayCalories) || 0}`, icon: Flame },
+    { label: "Today's Protein", value: `${Number(kpiData?.todayProtein) || 0}g`, icon: Beef },
     { label: 'Weekly Sessions', value: `${kpiData?.weekSessionCount ?? 0}`, icon: Dumbbell },
   ];
 

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { weightApi, foodApi, sessionsApi, dashboardApi } from '@/lib/api';
+import { PaginatedSessions } from '@/types/gym';
 
 // ---- Weight ----
 
@@ -105,6 +106,20 @@ export function useCompleteSession() {
     mutationFn: sessionsApi.complete,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['sessions'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+export function useDeleteSession() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: sessionsApi.delete,
+    onSuccess: (_data, sessionId) => {
+      qc.setQueriesData<PaginatedSessions>(
+        { queryKey: ['sessions'] },
+        (old) => old ? { ...old, data: old.data.filter(s => s.id !== sessionId), total: old.total - 1 } : old
+      );
       qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });

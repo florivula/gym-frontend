@@ -23,8 +23,8 @@ export default function Food() {
 
   const sortedEntries = [...todayEntries].sort((a, b) => a.time.localeCompare(b.time));
 
-  const totalCalories = sortedEntries.reduce((s, e) => s + e.calories, 0);
-  const totalProtein = sortedEntries.reduce((s, e) => s + e.protein, 0);
+  const totalCalories = sortedEntries.reduce((s, e) => s + Number(e.calories), 0);
+  const totalProtein = sortedEntries.reduce((s, e) => s + Number(e.protein), 0);
 
   const handleAdd = () => {
     if (!name.trim()) { toast.error('Enter a food name'); return; }

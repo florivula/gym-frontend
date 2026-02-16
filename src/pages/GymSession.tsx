@@ -7,8 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Dumbbell, Plus, Check, Trash2, ChevronDown } from 'lucide-react';
-import { useActiveSession, useSessions, useStartSession, useAddExercise, useCompleteSession } from '@/hooks/useApi';
+import { useActiveSession, useSessions, useStartSession, useAddExercise, useCompleteSession, useDeleteSession } from '@/hooks/useApi';
 import { Exercise, WorkoutPlan, PLAN_DAY_TYPES } from '@/types/gym';
 import { toast } from 'sonner';
 
@@ -18,6 +22,7 @@ export default function GymSession() {
   const startSession = useStartSession();
   const addExercise = useAddExercise();
   const completeSession = useCompleteSession();
+  const deleteSession = useDeleteSession();
 
   // New session form
   const [plan, setPlan] = useState<WorkoutPlan>('PPL');
@@ -82,6 +87,13 @@ export default function GymSession() {
     completeSession.mutate(activeSession.id, {
       onSuccess: () => toast.success('Session completed!'),
       onError: () => toast.error('Failed to complete session'),
+    });
+  };
+
+  const handleDeleteSession = (id: number) => {
+    deleteSession.mutate(id, {
+      onSuccess: () => toast.success('Session deleted'),
+      onError: () => toast.error('Failed to delete session'),
     });
   };
 
@@ -242,17 +254,40 @@ export default function GymSession() {
           ) : (
             completedSessions.map(session => (
               <Collapsible key={session.id}>
-                <CollapsibleTrigger className="w-full">
-                  <div className="flex items-center justify-between rounded-lg bg-secondary p-3 hover:bg-secondary/80 transition-colors">
-                    <div className="text-left">
-                      <p className="font-medium text-sm">{format(new Date(session.startedAt), 'MMM d, yyyy')}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {session.dayType} — {session.plan} • {session.exercises.length} exercises • {totalVolume(session.exercises).toLocaleString()} kg
-                      </p>
+                <div className="flex items-center gap-1">
+                  <CollapsibleTrigger className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between rounded-lg bg-secondary p-3 hover:bg-secondary/80 transition-colors">
+                      <div className="text-left">
+                        <p className="font-medium text-sm">{format(new Date(session.startedAt), 'MMM d, yyyy')}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {session.dayType} — {session.plan} • {session.exercises.length} exercises • {totalVolume(session.exercises).toLocaleString()} kg
+                        </p>
+                      </div>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </CollapsibleTrigger>
+                  </CollapsibleTrigger>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" disabled={deleteSession.isPending}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete session?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete the {session.dayType} session from {format(new Date(session.startedAt), 'MMM d, yyyy')}. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeleteSession(session.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
                 <CollapsibleContent>
                   <div className="mt-1 rounded-lg border border-border p-3 space-y-2">
                     {session.exercises.map((ex) => (
