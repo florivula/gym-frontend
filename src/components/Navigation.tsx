@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Scale, Utensils, Dumbbell } from 'lucide-react';
+import { LayoutDashboard, Scale, Utensils, Dumbbell, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -11,6 +12,7 @@ const navItems = [
 
 export default function Navigation() {
   const { pathname } = useLocation();
+  const { logout } = useAuth();
 
   return (
     <>
@@ -32,6 +34,13 @@ export default function Navigation() {
             {label}
           </Link>
         ))}
+        <button
+          onClick={logout}
+          className="ml-auto flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <LogOut className="h-4 w-4" />
+          Logout
+        </button>
       </nav>
 
       {/* Mobile bottom nav */}
@@ -51,6 +60,13 @@ export default function Navigation() {
             {label}
           </Link>
         ))}
+        <button
+          onClick={logout}
+          className="flex flex-col items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors"
+        >
+          <LogOut className="h-5 w-5" />
+          Logout
+        </button>
       </nav>
     </>
   );
