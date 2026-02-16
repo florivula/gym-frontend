@@ -8,41 +8,40 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dumbbell, Plus, Check, Trash2, ChevronDown } from 'lucide-react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { GymSession as GymSessionType, Exercise, ExerciseSet, WorkoutPlan, PLAN_DAY_TYPES } from '@/types/gym';
+import { useActiveSession, useSessions, useStartSession, useAddExercise, useCompleteSession } from '@/hooks/useApi';
+import { Exercise, WorkoutPlan, PLAN_DAY_TYPES } from '@/types/gym';
 import { toast } from 'sonner';
 
 export default function GymSession() {
-  const [sessions, setSessions] = useLocalStorage<GymSessionType[]>('gym-sessions', []);
+  const { data: activeSession, isLoading: loadingActive } = useActiveSession();
+  const { data: sessionsPage, isLoading: loadingHistory } = useSessions(1, 50);
+  const startSession = useStartSession();
+  const addExercise = useAddExercise();
+  const completeSession = useCompleteSession();
 
   // New session form
   const [plan, setPlan] = useState<WorkoutPlan>('PPL');
   const [dayType, setDayType] = useState(PLAN_DAY_TYPES['PPL'][0]);
 
-  // Active session state
+  // Active session exercise form
   const [exerciseName, setExerciseName] = useState('');
   const [setWeight, setSetWeight] = useState('');
   const [setReps, setSetReps] = useState('');
-  const [currentSets, setCurrentSets] = useState<ExerciseSet[]>([]);
+  const [currentSets, setCurrentSets] = useState<{ weight: number; reps: number }[]>([]);
 
-  const activeSession = sessions.find(s => !s.completed);
   const completedSessions = useMemo(
-    () => sessions.filter(s => s.completed).sort((a, b) => b.date.localeCompare(a.date)),
-    [sessions]
+    () => (sessionsPage?.data ?? []).filter(s => !s.isActive).sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
+    [sessionsPage]
   );
 
   const handleStartSession = () => {
-    const session: GymSessionType = {
-      id: crypto.randomUUID(),
-      date: format(new Date(), 'yyyy-MM-dd'),
-      plan,
-      dayType,
-      exercises: [],
-      completed: false,
-      startTime: new Date().toISOString(),
-    };
-    setSessions(prev => [...prev, session]);
-    toast.success('Session started!');
+    startSession.mutate(
+      { plan, dayType },
+      {
+        onSuccess: () => toast.success('Session started!'),
+        onError: () => toast.error('Failed to start session'),
+      }
+    );
   };
 
   const handleAddSet = () => {
@@ -57,39 +56,41 @@ export default function GymSession() {
   const handleCompleteExercise = () => {
     if (!exerciseName.trim()) { toast.error('Enter exercise name'); return; }
     if (currentSets.length === 0) { toast.error('Add at least one set'); return; }
+    if (!activeSession) return;
 
-    const exercise: Exercise = { name: exerciseName.trim(), sets: [...currentSets] };
-    setSessions(prev =>
-      prev.map(s =>
-        s.id === activeSession?.id
-          ? { ...s, exercises: [...s.exercises, exercise] }
-          : s
-      )
-    );
-    setExerciseName('');
-    setCurrentSets([]);
-    toast.success('Exercise added');
-  };
-
-  const handleRemoveExercise = (index: number) => {
-    setSessions(prev =>
-      prev.map(s =>
-        s.id === activeSession?.id
-          ? { ...s, exercises: s.exercises.filter((_, i) => i !== index) }
-          : s
-      )
+    addExercise.mutate(
+      {
+        sessionId: activeSession.id,
+        data: {
+          name: exerciseName.trim(),
+          sets: currentSets.map((s, i) => ({ weight: s.weight, reps: s.reps, setNumber: i + 1 })),
+        },
+      },
+      {
+        onSuccess: () => {
+          setExerciseName('');
+          setCurrentSets([]);
+          toast.success('Exercise added');
+        },
+        onError: () => toast.error('Failed to add exercise'),
+      }
     );
   };
 
   const handleCompleteSession = () => {
-    setSessions(prev =>
-      prev.map(s => (s.id === activeSession?.id ? { ...s, completed: true } : s))
-    );
-    toast.success('Session completed! 💪');
+    if (!activeSession) return;
+    completeSession.mutate(activeSession.id, {
+      onSuccess: () => toast.success('Session completed!'),
+      onError: () => toast.error('Failed to complete session'),
+    });
   };
 
   const totalVolume = (exercises: Exercise[]) =>
     exercises.reduce((t, ex) => t + ex.sets.reduce((s, set) => s + set.weight * set.reps, 0), 0);
+
+  if (loadingActive || loadingHistory) {
+    return <div className="text-center py-8 text-muted-foreground">Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -107,7 +108,7 @@ export default function GymSession() {
                 <p className="font-semibold text-sm">Session in progress</p>
                 <p className="text-xs text-muted-foreground">
                   {activeSession.dayType} — {activeSession.plan} • Started{' '}
-                  {format(new Date(activeSession.startTime), 'h:mm a')}
+                  {format(new Date(activeSession.startedAt), 'h:mm a')}
                 </p>
               </div>
             </div>
@@ -146,8 +147,8 @@ export default function GymSession() {
                 </Select>
               </div>
             </div>
-            <Button onClick={handleStartSession} className="w-full sm:w-auto">
-              <Dumbbell className="mr-2 h-4 w-4" /> Start Session
+            <Button onClick={handleStartSession} disabled={startSession.isPending} className="w-full sm:w-auto">
+              <Dumbbell className="mr-2 h-4 w-4" /> {startSession.isPending ? 'Starting...' : 'Start Session'}
             </Button>
           </CardContent>
         </Card>
@@ -192,8 +193,8 @@ export default function GymSession() {
                 </div>
               )}
 
-              <Button variant="secondary" onClick={handleCompleteExercise} className="w-full">
-                <Check className="mr-2 h-4 w-4" /> Complete Exercise
+              <Button variant="secondary" onClick={handleCompleteExercise} disabled={addExercise.isPending} className="w-full">
+                <Check className="mr-2 h-4 w-4" /> {addExercise.isPending ? 'Saving...' : 'Complete Exercise'}
               </Button>
             </CardContent>
           </Card>
@@ -210,25 +211,22 @@ export default function GymSession() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {activeSession.exercises.map((ex, i) => (
-                  <div key={i} className="flex items-start justify-between rounded-lg bg-secondary p-3">
+                {activeSession.exercises.map((ex) => (
+                  <div key={ex.id} className="flex items-start justify-between rounded-lg bg-secondary p-3">
                     <div>
                       <p className="font-medium text-sm">{ex.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {ex.sets.map((s, j) => `${s.weight}kg×${s.reps}`).join(' | ')}
+                        {ex.sets.map((s) => `${s.weight}kg×${s.reps}`).join(' | ')}
                       </p>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveExercise(i)}>
-                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                    </Button>
                   </div>
                 ))}
               </CardContent>
             </Card>
           )}
 
-          <Button onClick={handleCompleteSession} className="w-full" size="lg">
-            <Check className="mr-2 h-5 w-5" /> Complete Session
+          <Button onClick={handleCompleteSession} disabled={completeSession.isPending} className="w-full" size="lg">
+            <Check className="mr-2 h-5 w-5" /> {completeSession.isPending ? 'Completing...' : 'Complete Session'}
           </Button>
         </>
       )}
@@ -247,7 +245,7 @@ export default function GymSession() {
                 <CollapsibleTrigger className="w-full">
                   <div className="flex items-center justify-between rounded-lg bg-secondary p-3 hover:bg-secondary/80 transition-colors">
                     <div className="text-left">
-                      <p className="font-medium text-sm">{format(new Date(session.date), 'MMM d, yyyy')}</p>
+                      <p className="font-medium text-sm">{format(new Date(session.startedAt), 'MMM d, yyyy')}</p>
                       <p className="text-xs text-muted-foreground">
                         {session.dayType} — {session.plan} • {session.exercises.length} exercises • {totalVolume(session.exercises).toLocaleString()} kg
                       </p>
@@ -257,11 +255,11 @@ export default function GymSession() {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="mt-1 rounded-lg border border-border p-3 space-y-2">
-                    {session.exercises.map((ex, i) => (
-                      <div key={i}>
+                    {session.exercises.map((ex) => (
+                      <div key={ex.id}>
                         <p className="text-sm font-medium">{ex.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {ex.sets.map((s, j) => `Set ${j + 1}: ${s.weight}kg × ${s.reps}`).join(' • ')}
+                          {ex.sets.map((s) => `Set ${s.setNumber}: ${s.weight}kg × ${s.reps}`).join(' • ')}
                         </p>
                       </div>
                     ))}

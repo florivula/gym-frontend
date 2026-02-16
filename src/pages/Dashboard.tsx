@@ -1,50 +1,42 @@
 import { useMemo } from 'react';
-import { format, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
+import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Scale, Flame, Beef, Dumbbell } from 'lucide-react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { WeightEntry, FoodEntry, GymSession } from '@/types/gym';
+import { useDashboardKPI, useLatestSession, useDashboardCalendar } from '@/hooks/useApi';
 import ConsistencyCalendar from '@/components/ConsistencyCalendar';
 
 export default function Dashboard() {
-  const [weights] = useLocalStorage<WeightEntry[]>('gym-weights', []);
-  const [foods] = useLocalStorage<FoodEntry[]>('gym-foods', []);
-  const [sessions] = useLocalStorage<GymSession[]>('gym-sessions', []);
+  const { data: kpiData, isLoading: loadingKPI } = useDashboardKPI();
+  const { data: lastSession } = useLatestSession();
 
-  const today = format(new Date(), 'yyyy-MM-dd');
+  // Fetch 5 months of calendar data for the ~17-week heatmap
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1; // 1-indexed
+  const { data: cal0 } = useDashboardCalendar(y, m);
+  const { data: cal1 } = useDashboardCalendar(m > 1 ? y : y - 1, m > 1 ? m - 1 : 12);
+  const { data: cal2 } = useDashboardCalendar(m > 2 ? y : y - 1, m > 2 ? m - 2 : 12 + m - 2);
+  const { data: cal3 } = useDashboardCalendar(m > 3 ? y : y - 1, m > 3 ? m - 3 : 12 + m - 3);
+  const { data: cal4 } = useDashboardCalendar(m > 4 ? y : y - 1, m > 4 ? m - 4 : 12 + m - 4);
 
-  const currentWeight = weights.length
-    ? [...weights].sort((a, b) => b.date.localeCompare(a.date))[0].weight
-    : null;
-
-  const todayFoods = foods.filter(f => f.date === today);
-  const todayCalories = todayFoods.reduce((s, f) => s + f.calories, 0);
-  const todayProtein = todayFoods.reduce((s, f) => s + f.protein, 0);
-
-  const weekSessions = useMemo(() => {
-    const now = new Date();
-    const start = startOfWeek(now, { weekStartsOn: 1 });
-    const end = endOfWeek(now, { weekStartsOn: 1 });
-    return sessions.filter(s => s.completed && isWithinInterval(new Date(s.date), { start, end })).length;
-  }, [sessions]);
-
-  const lastSession = useMemo(() => {
-    const completed = sessions.filter(s => s.completed).sort((a, b) => b.date.localeCompare(a.date));
-    return completed[0] || null;
-  }, [sessions]);
-
-  const sessionDates = useMemo(
-    () => sessions.filter(s => s.completed).map(s => s.date),
-    [sessions]
-  );
+  const sessionDates = useMemo(() => {
+    const allSessions = [cal0, cal1, cal2, cal3, cal4]
+      .filter(Boolean)
+      .flatMap(c => c!.sessions);
+    return allSessions.map(s => s.date);
+  }, [cal0, cal1, cal2, cal3, cal4]);
 
   const kpis = [
-    { label: 'Current Weight', value: currentWeight ? `${currentWeight} kg` : '—', icon: Scale },
-    { label: "Today's Calories", value: `${todayCalories}`, icon: Flame },
-    { label: "Today's Protein", value: `${todayProtein}g`, icon: Beef },
-    { label: 'Weekly Sessions', value: `${weekSessions}`, icon: Dumbbell },
+    { label: 'Current Weight', value: kpiData?.currentWeight ? `${kpiData.currentWeight} kg` : '—', icon: Scale },
+    { label: "Today's Calories", value: `${kpiData?.todayCalories ?? 0}`, icon: Flame },
+    { label: "Today's Protein", value: `${kpiData?.todayProtein ?? 0}g`, icon: Beef },
+    { label: 'Weekly Sessions', value: `${kpiData?.weekSessionCount ?? 0}`, icon: Dumbbell },
   ];
+
+  if (loadingKPI) {
+    return <div className="text-center py-8 text-muted-foreground">Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -74,7 +66,7 @@ export default function Dashboard() {
           {lastSession ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>{format(new Date(lastSession.date), 'MMM d, yyyy')}</span>
+                <span>{format(new Date(lastSession.startedAt), 'MMM d, yyyy')}</span>
                 <span>•</span>
                 <span className="text-primary font-medium">{lastSession.dayType} — {lastSession.plan}</span>
               </div>
@@ -88,8 +80,8 @@ export default function Dashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {lastSession.exercises.map((ex, i) => (
-                    <TableRow key={i}>
+                  {lastSession.exercises.map((ex) => (
+                    <TableRow key={ex.id}>
                       <TableCell className="font-medium">{ex.name}</TableCell>
                       <TableCell className="text-right">{ex.sets.length}</TableCell>
                       <TableCell className="text-right">

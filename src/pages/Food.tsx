@@ -7,24 +7,24 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Trash2 } from 'lucide-react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { FoodEntry } from '@/types/gym';
+import { useFoodEntries, useCreateFood, useDeleteFood } from '@/hooks/useApi';
 import { toast } from 'sonner';
 
 export default function Food() {
-  const [entries, setEntries] = useLocalStorage<FoodEntry[]>('gym-foods', []);
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const { data: todayEntries = [], isLoading } = useFoodEntries(today);
+  const createFood = useCreateFood();
+  const deleteFood = useDeleteFood();
+
   const [name, setName] = useState('');
   const [calories, setCalories] = useState('');
   const [protein, setProtein] = useState('');
   const [time, setTime] = useState(format(new Date(), 'HH:mm'));
 
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const todayEntries = entries
-    .filter(e => e.date === today)
-    .sort((a, b) => a.time.localeCompare(b.time));
+  const sortedEntries = [...todayEntries].sort((a, b) => a.time.localeCompare(b.time));
 
-  const totalCalories = todayEntries.reduce((s, e) => s + e.calories, 0);
-  const totalProtein = todayEntries.reduce((s, e) => s + e.protein, 0);
+  const totalCalories = sortedEntries.reduce((s, e) => s + e.calories, 0);
+  const totalProtein = sortedEntries.reduce((s, e) => s + e.protein, 0);
 
   const handleAdd = () => {
     if (!name.trim()) { toast.error('Enter a food name'); return; }
@@ -32,26 +32,31 @@ export default function Food() {
     const prot = parseInt(protein);
     if (!cal || cal < 0) { toast.error('Enter valid calories'); return; }
 
-    const entry: FoodEntry = {
-      id: crypto.randomUUID(),
-      date: today,
-      time,
-      name: name.trim(),
-      calories: cal,
-      protein: prot || 0,
-    };
-    setEntries(prev => [...prev, entry]);
-    setName('');
-    setCalories('');
-    setProtein('');
-    setTime(format(new Date(), 'HH:mm'));
-    toast.success('Food added');
+    createFood.mutate(
+      { name: name.trim(), calories: cal, protein: prot || 0, date: today, time },
+      {
+        onSuccess: () => {
+          setName('');
+          setCalories('');
+          setProtein('');
+          setTime(format(new Date(), 'HH:mm'));
+          toast.success('Food added');
+        },
+        onError: () => toast.error('Failed to add food'),
+      }
+    );
   };
 
-  const handleDelete = (id: string) => {
-    setEntries(prev => prev.filter(e => e.id !== id));
-    toast.success('Entry deleted');
+  const handleDelete = (id: number) => {
+    deleteFood.mutate(id, {
+      onSuccess: () => toast.success('Entry deleted'),
+      onError: () => toast.error('Failed to delete'),
+    });
   };
+
+  if (isLoading) {
+    return <div className="text-center py-8 text-muted-foreground">Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -77,7 +82,9 @@ export default function Food() {
               <Input type="number" placeholder="30" value={protein} onChange={e => setProtein(e.target.value)} />
             </div>
           </div>
-          <Button onClick={handleAdd} className="w-full sm:w-auto">Add Food</Button>
+          <Button onClick={handleAdd} disabled={createFood.isPending} className="w-full sm:w-auto">
+            {createFood.isPending ? 'Adding...' : 'Add Food'}
+          </Button>
         </CardContent>
       </Card>
 
@@ -114,7 +121,7 @@ export default function Food() {
           <CardTitle className="text-base">Today's Food Log</CardTitle>
         </CardHeader>
         <CardContent>
-          {todayEntries.length === 0 ? (
+          {sortedEntries.length === 0 ? (
             <p className="text-sm text-muted-foreground">No food logged today.</p>
           ) : (
             <Table>
@@ -128,14 +135,14 @@ export default function Food() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {todayEntries.map(entry => (
+                {sortedEntries.map(entry => (
                   <TableRow key={entry.id}>
                     <TableCell className="text-muted-foreground">{entry.time}</TableCell>
                     <TableCell className="font-medium">{entry.name}</TableCell>
                     <TableCell className="text-right">{entry.calories}</TableCell>
                     <TableCell className="text-right">{entry.protein}g</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(entry.id)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(entry.id)} disabled={deleteFood.isPending}>
                         <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
                       </Button>
                     </TableCell>

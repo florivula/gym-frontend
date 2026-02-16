@@ -9,13 +9,15 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CalendarIcon, TrendingUp, TrendingDown, Minus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { WeightEntry } from '@/types/gym';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { useWeightEntries, useCreateWeight, useDeleteWeight } from '@/hooks/useApi';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { toast } from 'sonner';
 
 export default function Weight() {
-  const [entries, setEntries] = useLocalStorage<WeightEntry[]>('gym-weights', []);
+  const { data: entries = [], isLoading } = useWeightEntries();
+  const createWeight = useCreateWeight();
+  const deleteWeight = useDeleteWeight();
+
   const [weight, setWeight] = useState('');
   const [date, setDate] = useState<Date>(new Date());
 
@@ -29,23 +31,33 @@ export default function Weight() {
       return;
     }
     const dateStr = format(date, 'yyyy-MM-dd');
-    setEntries(prev => {
-      const filtered = prev.filter(e => e.date !== dateStr);
-      return [...filtered, { date: dateStr, weight: w }];
-    });
-    setWeight('');
-    toast.success('Weight saved');
+    createWeight.mutate(
+      { weight: w, date: dateStr },
+      {
+        onSuccess: () => {
+          setWeight('');
+          toast.success('Weight saved');
+        },
+        onError: () => toast.error('Failed to save weight'),
+      }
+    );
   };
 
-  const handleDelete = (dateStr: string) => {
-    setEntries(prev => prev.filter(e => e.date !== dateStr));
-    toast.success('Entry deleted');
+  const handleDelete = (id: number) => {
+    deleteWeight.mutate(id, {
+      onSuccess: () => toast.success('Entry deleted'),
+      onError: () => toast.error('Failed to delete'),
+    });
   };
 
   const chartData = sorted.map(e => ({
     date: format(new Date(e.date), 'MMM d'),
     weight: e.weight,
   }));
+
+  if (isLoading) {
+    return <div className="text-center py-8 text-muted-foreground">Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -85,7 +97,9 @@ export default function Weight() {
               </Popover>
             </div>
           </div>
-          <Button onClick={handleSave} className="w-full sm:w-auto">Save Weight</Button>
+          <Button onClick={handleSave} disabled={createWeight.isPending} className="w-full sm:w-auto">
+            {createWeight.isPending ? 'Saving...' : 'Save Weight'}
+          </Button>
         </CardContent>
       </Card>
 
@@ -151,7 +165,7 @@ export default function Weight() {
                   const prevEntry = reversed[i + 1];
                   const change = prevEntry ? entry.weight - prevEntry.weight : 0;
                   return (
-                    <TableRow key={entry.date}>
+                    <TableRow key={entry.id}>
                       <TableCell>{format(new Date(entry.date), 'MMM d, yyyy')}</TableCell>
                       <TableCell className="text-right font-medium">{entry.weight} kg</TableCell>
                       <TableCell className="text-right">
@@ -165,7 +179,7 @@ export default function Weight() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(entry.date)}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(entry.id)} disabled={deleteWeight.isPending}>
                           <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
                         </Button>
                       </TableCell>
