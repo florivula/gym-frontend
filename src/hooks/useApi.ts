@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { weightApi, foodApi, sessionsApi, dashboardApi } from '@/lib/api';
 import { PaginatedSessions } from '@/types/gym';
 
@@ -136,4 +136,33 @@ export function useDashboardCalendar(year: number, month: number) {
     queryKey: ['dashboard', 'calendar', year, month],
     queryFn: () => dashboardApi.getCalendar(year, month),
   });
+}
+
+export function useSessionDates() {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  const months: { year: number; month: number }[] = [];
+  let y = 2025, m = 1;
+  while (y < currentYear || (y === currentYear && m <= currentMonth)) {
+    months.push({ year: y, month: m });
+    m++;
+    if (m > 12) { m = 1; y++; }
+  }
+
+  const results = useQueries({
+    queries: months.map(({ year, month }) => ({
+      queryKey: ['dashboard', 'calendar', year, month],
+      queryFn: () => dashboardApi.getCalendar(year, month),
+    })),
+  });
+
+  const sessionDates = results
+    .map(r => r.data)
+    .filter(Boolean)
+    .flatMap(c => c!.sessions)
+    .map(s => s.date);
+
+  return sessionDates;
 }

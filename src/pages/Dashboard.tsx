@@ -1,31 +1,14 @@
-import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Scale, Flame, Beef, Dumbbell } from 'lucide-react';
-import { useDashboardKPI, useLatestSession, useDashboardCalendar } from '@/hooks/useApi';
+import { useDashboardKPI, useLatestSession, useSessionDates } from '@/hooks/useApi';
 import ConsistencyCalendar from '@/components/ConsistencyCalendar';
 
 export default function Dashboard() {
   const { data: kpiData, isLoading: loadingKPI } = useDashboardKPI();
   const { data: lastSession } = useLatestSession();
-
-  // Fetch 5 months of calendar data for the ~17-week heatmap
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth() + 1; // 1-indexed
-  const { data: cal0 } = useDashboardCalendar(y, m);
-  const { data: cal1 } = useDashboardCalendar(m > 1 ? y : y - 1, m > 1 ? m - 1 : 12);
-  const { data: cal2 } = useDashboardCalendar(m > 2 ? y : y - 1, m > 2 ? m - 2 : 12 + m - 2);
-  const { data: cal3 } = useDashboardCalendar(m > 3 ? y : y - 1, m > 3 ? m - 3 : 12 + m - 3);
-  const { data: cal4 } = useDashboardCalendar(m > 4 ? y : y - 1, m > 4 ? m - 4 : 12 + m - 4);
-
-  const sessionDates = useMemo(() => {
-    const allSessions = [cal0, cal1, cal2, cal3, cal4]
-      .filter(Boolean)
-      .flatMap(c => c!.sessions);
-    return allSessions.map(s => s.date);
-  }, [cal0, cal1, cal2, cal3, cal4]);
+  const sessionDates = useSessionDates();
 
   const kpis = [
     { label: 'Current Weight', value: kpiData?.currentWeight ? `${kpiData.currentWeight} kg` : '—', icon: Scale },
