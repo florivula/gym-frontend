@@ -34,7 +34,7 @@ export default function Login() {
   };
 
   return (
-    <div className="dark min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="dark min-h-screen flex flex-col items-center justify-center bg-background px-4 gap-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <Dumbbell className="mx-auto h-10 w-10 text-primary mb-2" />
@@ -72,12 +72,9 @@ export default function Login() {
           </form>
         </CardContent>
       </Card>
-      <Link
-        to="/progress"
-        className="mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        👀 Look at Flori's progress
-      </Link>
+      <Button variant="outline" className="w-full max-w-sm" asChild>
+        <Link to="/progress">Look at Flori's Progress</Link>
+      </Button>
     </div>
   );
 }
