@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { authApi } from '@/lib/api';
@@ -72,6 +72,12 @@ export default function Login() {
           </form>
         </CardContent>
       </Card>
+      <Link
+        to="/progress"
+        className="mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        👀 Look at Flori's progress
+      </Link>
     </div>
   );
 }

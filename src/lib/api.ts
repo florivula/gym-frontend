@@ -117,6 +117,16 @@ export const dashboardApi = {
     request<CalendarData>(`/dashboard/calendar/${year}/${month}`),
 };
 
+// Public (no auth)
+export const publicApi = {
+  getKpi: () => request<DashboardKPI>('/public/kpi'),
+  getWeight: () => request<WeightEntry[]>('/public/weight'),
+  getSessions: (page = 1, limit = 10) =>
+    request<PaginatedSessions>(`/public/sessions?page=${page}&limit=${limit}`),
+  getCalendar: (year: number, month: number) =>
+    request<CalendarData>(`/public/calendar/${year}/${month}`),
+};
+
 // Auth
 export const authApi = {
   login: (data: LoginPayload) =>

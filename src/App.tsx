@@ -11,6 +11,7 @@ import Weight from "./pages/Weight";
 import Food from "./pages/Food";
 import GymSession from "./pages/GymSession";
 import Login from "./pages/Login";
+import PublicDashboard from "./pages/PublicDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ function AppRoutes() {
       <main className="mx-auto max-w-4xl px-4 py-6 pb-24 md:pb-6">
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/progress" element={<PublicDashboard />} />
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/weight" element={<ProtectedRoute><Weight /></ProtectedRoute>} />
           <Route path="/food" element={<ProtectedRoute><Food /></ProtectedRoute>} />
