@@ -7,14 +7,18 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Trash2 } from 'lucide-react';
-import { useFoodEntries, useCreateFood, useDeleteFood } from '@/hooks/useApi';
+import { useFoodEntries, useCreateFood, useDeleteFood, useProfile } from '@/hooks/useApi';
 import { toast } from 'sonner';
 
 export default function Food() {
   const today = format(new Date(), 'yyyy-MM-dd');
   const { data: todayEntries = [], isLoading } = useFoodEntries(today);
+  const { data: profile } = useProfile();
   const createFood = useCreateFood();
   const deleteFood = useDeleteFood();
+
+  const calorieGoal = profile?.dailyCalorieGoal;
+  const proteinGoal = profile?.dailyProteinGoal;
 
   const [name, setName] = useState('');
   const [calories, setCalories] = useState('');
@@ -102,16 +106,24 @@ export default function Food() {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Calories</span>
-              <span className="font-medium">{totalCalories} kcal</span>
+              <span className="font-medium">
+                {totalCalories}{calorieGoal ? ` / ${calorieGoal}` : ''} kcal
+              </span>
             </div>
-            <Progress value={Math.min((totalCalories / 2500) * 100, 100)} className="h-2" />
+            {calorieGoal && (
+              <Progress value={Math.min((totalCalories / calorieGoal) * 100, 100)} className="h-2" />
+            )}
           </div>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Protein</span>
-              <span className="font-medium">{totalProtein}g</span>
+              <span className="font-medium">
+                {totalProtein}{proteinGoal ? ` / ${proteinGoal}` : ''}g
+              </span>
             </div>
-            <Progress value={Math.min((totalProtein / 150) * 100, 100)} className="h-2" />
+            {proteinGoal && (
+              <Progress value={Math.min((totalProtein / proteinGoal) * 100, 100)} className="h-2" />
+            )}
           </div>
         </CardContent>
       </Card>

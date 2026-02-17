@@ -13,7 +13,6 @@ import { Dumbbell } from 'lucide-react';
 export default function Login() {
   const auth = useAuth();
   const navigate = useNavigate();
-  const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
@@ -27,23 +26,11 @@ export default function Login() {
     onError: () => toast.error('Invalid username or password'),
   });
 
-  const registerMutation = useMutation({
-    mutationFn: authApi.register,
-    onSuccess: (data) => {
-      auth.login(data.token);
-      toast.success('Account created successfully');
-      navigate('/');
-    },
-    onError: () => toast.error('Registration failed. Username may already be taken.'),
-  });
-
   if (auth.isAuthenticated) return <Navigate to="/" replace />;
-
-  const mutation = isRegister ? registerMutation : loginMutation;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    mutation.mutate({ username, password });
+    loginMutation.mutate({ username, password });
   };
 
   return (
@@ -53,7 +40,7 @@ export default function Login() {
           <Dumbbell className="mx-auto h-10 w-10 text-primary mb-2" />
           <CardTitle className="text-2xl">GymTracker</CardTitle>
           <p className="text-sm text-muted-foreground">
-            {isRegister ? 'Create an account' : 'Sign in to your account'}
+            Sign in to your account
           </p>
         </CardHeader>
         <CardContent>
@@ -76,22 +63,13 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                autoComplete={isRegister ? 'new-password' : 'current-password'}
+                autoComplete="current-password"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={mutation.isPending}>
-              {mutation.isPending ? (isRegister ? 'Creating account…' : 'Signing in…') : (isRegister ? 'Create account' : 'Sign in')}
+            <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
+              {loginMutation.isPending ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm">
-            <button
-              type="button"
-              className="text-primary hover:underline"
-              onClick={() => setIsRegister(!isRegister)}
-            >
-              {isRegister ? 'Already have an account? Sign in' : "Don't have an account? Register"}
-            </button>
-          </div>
         </CardContent>
       </Card>
     </div>

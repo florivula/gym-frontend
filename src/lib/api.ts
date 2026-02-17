@@ -21,9 +21,16 @@ export interface LoginPayload {
   password: string;
 }
 
-export interface RegisterPayload {
+export interface UserProfile {
+  id: number;
   username: string;
-  password: string;
+  dailyCalorieGoal: number | null;
+  dailyProteinGoal: number | null;
+}
+
+export interface UpdateProfilePayload {
+  dailyCalorieGoal?: number;
+  dailyProteinGoal?: number;
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -110,10 +117,11 @@ export const dashboardApi = {
     request<CalendarData>(`/dashboard/calendar/${year}/${month}`),
 };
 
-// Auth (no Bearer token needed for these)
+// Auth
 export const authApi = {
   login: (data: LoginPayload) =>
     request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
-  register: (data: RegisterPayload) =>
-    request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  getProfile: () => request<UserProfile>('/auth/me'),
+  updateProfile: (data: UpdateProfilePayload) =>
+    request<UserProfile>('/auth/profile', { method: 'PUT', body: JSON.stringify(data) }),
 };

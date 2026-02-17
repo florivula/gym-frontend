@@ -1,6 +1,22 @@
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
-import { weightApi, foodApi, sessionsApi, dashboardApi } from '@/lib/api';
+import { weightApi, foodApi, sessionsApi, dashboardApi, authApi } from '@/lib/api';
 import { PaginatedSessions } from '@/types/gym';
+
+// ---- Profile ----
+
+export function useProfile() {
+  return useQuery({ queryKey: ['profile'], queryFn: authApi.getProfile });
+}
+
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: authApi.updateProfile,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['profile'] });
+    },
+  });
+}
 
 // ---- Weight ----
 
