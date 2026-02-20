@@ -15,6 +15,14 @@ export interface FoodEntry {
   createdAt: string;
 }
 
+export interface SavedFood {
+  id: number;
+  name: string;
+  calories: number;
+  protein: number;
+  createdAt: string;
+}
+
 export interface ExerciseSet {
   id: number;
   exerciseId: number;

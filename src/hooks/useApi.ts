@@ -1,5 +1,5 @@
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
-import { weightApi, foodApi, sessionsApi, dashboardApi, authApi } from '@/lib/api';
+import { weightApi, foodApi, savedFoodsApi, sessionsApi, dashboardApi, authApi } from '@/lib/api';
 import { PaginatedSessions } from '@/types/gym';
 
 // ---- Profile ----
@@ -67,6 +67,43 @@ export function useDeleteFood() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: foodApi.delete,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['food'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+// ---- Saved Foods ----
+
+export function useSavedFoods() {
+  return useQuery({ queryKey: ['saved-foods'], queryFn: savedFoodsApi.getAll });
+}
+
+export function useCreateSavedFood() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: savedFoodsApi.create,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['saved-foods'] });
+    },
+  });
+}
+
+export function useDeleteSavedFood() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: savedFoodsApi.delete,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['saved-foods'] });
+    },
+  });
+}
+
+export function useAddSavedFoodToToday() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, time }: { id: number; time?: string }) => savedFoodsApi.addToToday(id, time),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['food'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });

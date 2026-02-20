@@ -1,6 +1,7 @@
 import type {
   WeightEntry,
   FoodEntry,
+  SavedFood,
   GymSession,
   Exercise,
   DashboardKPI,
@@ -125,6 +126,17 @@ export const publicApi = {
     request<PaginatedSessions>(`/public/sessions?page=${page}&limit=${limit}`),
   getCalendar: (year: number, month: number) =>
     request<CalendarData>(`/public/calendar/${year}/${month}`),
+};
+
+// Saved Foods
+export const savedFoodsApi = {
+  getAll: () => request<SavedFood[]>('/saved-foods'),
+  create: (data: { name: string; calories: number; protein: number }) =>
+    request<SavedFood>('/saved-foods', { method: 'POST', body: JSON.stringify(data) }),
+  delete: (id: number) =>
+    request<void>(`/saved-foods/${id}`, { method: 'DELETE' }),
+  addToToday: (id: number, time?: string) =>
+    request<FoodEntry>(`/saved-foods/${id}/add-to-today`, { method: 'POST', body: JSON.stringify({ time }) }),
 };
 
 // Auth
