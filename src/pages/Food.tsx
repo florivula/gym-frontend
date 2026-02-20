@@ -127,22 +127,24 @@ export default function Food() {
 
       <Card>
         <CardContent className="p-4 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Food Name</Label>
               <Input placeholder="Chicken breast" value={name} onChange={e => setName(e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <Label>Time</Label>
-              <Input type="time" value={time} onChange={e => setTime(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Calories</Label>
-              <Input type="number" placeholder="350" value={calories} onChange={e => setCalories(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>Protein (g)</Label>
-              <Input type="number" placeholder="30" value={protein} onChange={e => setProtein(e.target.value)} />
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Time</Label>
+                <Input type="time" value={time} onChange={e => setTime(e.target.value)} className="w-full" />
+              </div>
+              <div className="space-y-2">
+                <Label>Calories</Label>
+                <Input type="number" placeholder="350" value={calories} onChange={e => setCalories(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Protein (g)</Label>
+                <Input type="number" placeholder="30" value={protein} onChange={e => setProtein(e.target.value)} />
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-4">
